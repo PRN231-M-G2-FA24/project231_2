@@ -1,0 +1,333 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Inventory Search</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  
+</head>
+<body>
+    <div class="container mt-5">
+        <form method="get" id="search-form" class="mb-4">
+            <div class="row">
+                <div class="col-md-3">
+                    <label for="categoryName" class="form-label">Category:</label>
+                    <select class="form-select" id="categoryName" name="categoryName">
+                        <option value="">All</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="supplierName" class="form-label">Supplier:</label>
+                    <select class="form-select" id="supplierName" name="supplierName">
+                        <option value="">All</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="productName" class="form-label">Product Name:</label>
+                    <input type="text" class="form-control" id="productName" name="productName">
+                </div>
+                <div class="col-md-3">
+                    <label for="startDate" class="form-label">Start Date:</label>
+                    <input type="date" class="form-control" id="startDate" name="StartDate" value="@DateTime.Now.ToString(" yyyy-MM-dd")" />
+                </div>
+            </div>
+            <div class="row mt-3">
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-primary">Search</button>
+                </div>
+            </div>
+        </form>
+
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <button id="exportButton" class="btn btn-success">Export to Excel</button>
+            </div>
+            <div class="col-md-6">
+                <form id="importForm" enctype="multipart/form-data">
+                    <label for="fileInput" class="form-label">Select Excel File:</label>
+                    <div class="input-group">
+                        <input type="file" id="fileInput" name="file" accept=".xlsx, .xls" class="form-control">
+                        <button type="button" class="btn btn-primary" onclick="importProducts()">Import Products</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-12" id="product-list"></div>
+        </div>
+
+        <div class="row mt-3">
+            <div class="col-md-12" id="pagination">
+                <nav aria-label="Page navigation">
+                    <ul class="pagination justify-content-center">
+                        <li class="page-item" id="page-prev">
+                            <a class="page-link" href="#" aria-label="Previous">
+                                <span aria-hidden="true">&laquo;</span>
+                            </a>
+                        </li>
+
+                        <li class="page-item" id="page-next">
+                            <a class="page-link" href="#" aria-label="Next">
+                                <span aria-hidden="true">&raquo;</span>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+                <p id="page-info" class="text-center"></p>
+            </div>
+        </div>
+    </div>
+
+
+
+
+
+
+    <script>
+        $(document).ready(function () {
+            var pageSize = 5;
+            var currentPage = 1;
+            var totalItems = 0;
+            const token = localStorage.getItem('token');
+
+
+            loadProducts(currentPage);
+
+
+
+            $('#search-form').submit(function (event) {
+                event.preventDefault();
+                currentPage = 1;
+                loadProducts(currentPage);
+            });
+
+
+            $.ajax({
+                url: 'http://localhost:5191/api/Category/GetCategory',
+                method: 'GET',
+                contentType: 'application/json',
+                headers: {
+                    'Authorization': 'Bearer ' + token
+                },
+                success: function (data) {
+
+                    var categorySelect = $('#categoryName');
+
+                    data.forEach(function (category) {
+                        categorySelect.append($('<option>', {
+                            value: category.id,
+                            text: category.name
+                        }));
+                    });
+                },
+                error: function (error) {
+                    console.error(error);
+                }
+            });
+            $.ajax({
+                url: 'http://localhost:5191/api/Supplier/GetSupplier',
+                method: 'GET',
+                contentType: 'application/json',
+                headers: {
+                    'Authorization': 'Bearer ' + token
+                },
+                success: function (data) {
+
+                    var supplierSelect = $('#supplierName');
+
+                    data.forEach(function (supplier) {
+                        supplierSelect.append($('<option>', {
+                            value: supplier.id,
+                            text: supplier.name
+                        }));
+                    });
+                },
+                error: function (error) {
+                    console.error(error);
+                }
+            });
+
+
+            function loadProducts(page) {
+                var categoryName = $('#categoryName').val();
+                var supplierName = $('#supplierName').val();
+                var productName = $('#productName').val();
+                var startDate = $('#startDate').val();
+
+
+                var apiUrl = 'http://localhost:5191/api/Inventory/GetInventory?page=' + page + '&pageSize=' + pageSize;
+
+                if (categoryName) apiUrl += '&categoryName=' + categoryName;
+                if (supplierName) apiUrl += '&supplierName=' + supplierName;
+                if (productName) apiUrl += '&productName=' + productName;
+                if (startDate) apiUrl += '&startDate=' + startDate;
+                $.ajax({
+                    url: apiUrl,
+                    method: 'GET',
+                    contentType: 'application/json',
+                    headers: {
+                        'Authorization': 'Bearer ' + token
+                    },
+                    success: function (data) {
+
+                        var productList = data;
+                        console.log(productList);
+                        totalItems = data.totalCount;
+
+
+                        var productHtml = '<table class="table table-bordered">';
+                        productHtml += '<thead>';
+                        productHtml += '<th>Name</th>';
+                        productHtml += '<th>Category</th>';
+                        productHtml += '<th>Price</th>';
+                        productHtml += '<th>Supplier</th>';
+                        productHtml += '<th>Delivery Date</th>';
+                        productHtml += '</thead>';
+                        productHtml += '<tbody>';
+
+                        productList.items.forEach(element => {
+                            productHtml += '<tr>';
+                            productHtml += '<td>' + element.name + '</td>';
+                            productHtml += '<td>' + element.categoryName + '</td>';
+                            productHtml += '<td>' + element.price + '</td>';
+                            productHtml += '<td>' + element.supplierName + '</td>';
+                            productHtml += '<td>' + element.dateInventory + '</td>';
+                            productHtml += '</tr>';
+                        });
+
+                        productHtml += '</tbody>';
+                        productHtml += '</table>';
+
+                        $('#product-list').html(productHtml);
+                        updatePagination();
+
+
+
+                    },
+                    error: function (error) {
+                        console.error(error);
+                    }
+                });
+            }
+            function updatePagination() {
+                var totalPages = Math.ceil(totalItems / pageSize);
+
+                // Ẩn hoặc hiển thị nút "Previous" dựa trên trang hiện tại
+                if (currentPage === 1) {
+                    $('#page-prev').addClass('disabled');
+                } else {
+                    $('#page-prev').removeClass('disabled');
+                }
+
+                // Ẩn hoặc hiển thị nút "Next" dựa trên trang hiện tại và tổng số trang
+                if (currentPage === totalPages) {
+                    $('#page-next').addClass('disabled');
+                } else {
+                    $('#page-next').removeClass('disabled');
+                }
+
+                $('#page-info').text('Page ' + currentPage + ' of ' + totalPages);
+            }
+
+
+            // Xử lý sự kiện khi nút "Previous" được nhấn
+            $('#page-prev').click(function (event) {
+                event.preventDefault();
+                if (currentPage > 1) {
+                    currentPage--;
+                    loadProducts(currentPage);
+                }
+            });
+
+            // Xử lý sự kiện khi nút "Next" được nhấn
+            $('#page-next').click(function (event) {
+                event.preventDefault();
+                if (currentPage < Math.ceil(totalItems / pageSize)) {
+                    currentPage++;
+                    loadProducts(currentPage);
+                }
+            });
+
+
+            document.getElementById('exportButton').addEventListener('click', function () {
+
+                const token = localStorage.getItem('token');
+
+                fetch('http://localhost:5191/api/Inventory/ExportExcel?FileName=products', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                    },
+                })
+                    .then(response => response.blob())
+                    .then(blob => {
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.style.display = 'none';
+                        a.href = url;
+                        a.download = 'product.xlsx';
+                        document.body.appendChild(a);
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                    });
+            });
+
+
+
+
+        });
+        function importProducts() {
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+            const token = localStorage.getItem('token');
+
+            if (!file) {
+                alert('Please select a file.');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            $.ajax({
+                url: 'http://localhost:5191/api/Inventory/ImportProducts',
+                type: 'POST',
+                headers: {
+                    'Authorization': 'Bearer ' + token,
+                },
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function (response) {
+                    alert('Products imported successfully!');
+                    window.location.reload();
+                },
+                error: function (error) {
+                    console.error('Error:', error);
+                    alert('Failed to import products. Please try again.');
+                }
+            });
+        }
+        document.addEventListener("DOMContentLoaded", function () {
+            var currentDate = new Date();
+            var day = currentDate.getDate();
+            var month = currentDate.getMonth() + 1; // Lưu ý: Tháng trong JavaScript là từ 0 đến 11.
+            var year = currentDate.getFullYear();
+
+            // Định dạng ngày tháng để đưa vào input type="date"
+            var formattedDate = year + "-" + (month < 10 ? "0" + month : month) + "-" + (day < 10 ? "0" + day : day);
+
+            // Gán giá trị cho input
+            document.getElementById("startDate").value = formattedDate;
+        });
+
+    </script>
+
+</body>
+</html>

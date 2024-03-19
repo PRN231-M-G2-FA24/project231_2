@@ -1,0 +1,151 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Revenue Report</title>
+    <!-- Include Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <!-- Include jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Include Bootstrap JS -->
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+</head>
+<body>
+    <div class="container mt-5">
+        <h1>Revenue Report</h1>
+        <p>Total Revenue: $<span id="totalRevenue"></span></p>
+        <table class="table table-bordered table-striped">
+            <thead class="thead-dark">
+                <tr>
+                    <th>Product Name</th>
+                    <th>Total Quantity Sold</th>
+                    <th>Total Amount</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+        </table>
+    </div>
+    <div class="container mt-5">
+        <h1>Sale Report</h1>
+        
+        <canvas id="revenueChart" width="200" height="100"></canvas>
+    </div>
+
+
+    <script>
+        $(document).ready(function () {
+            var apiUrl = 'http://localhost:5191/api/SaleReport/GetRevenue';
+            var apiUrlTotalRevenue = 'http://localhost:5191/api/SaleReport/ReportPerMonth/getRevenueData';
+            const token = localStorage.getItem('token')
+
+           
+            $.ajax({
+                url: apiUrlTotalRevenue,
+                method: 'GET',
+                headers: {
+                    'Authorization': 'Bearer ' + token,
+                },
+                contentType: 'application/json',
+                success: function (data) {
+                 
+                    $('#totalRevenue').text(data.totalRevenue.toFixed(2));
+                },
+                error: function (error) {
+                    console.error(error);
+                }
+            });
+
+
+            $.ajax({
+                url: apiUrl,
+                method: 'GET',
+                headers: {
+                    'Authorization': 'Bearer ' + token,
+                },
+                contentType: 'application/json',
+
+                success: function (data) {
+                    
+                    $('#totalRevenue').text(data.totalRevenue);
+
+                   
+                    updateTable(data);
+                },
+                error: function (error) {
+                    console.error(error);
+                }
+            });
+
+            function updateTable(products) {
+                var tableBody = $('#tableBody');
+                tableBody.empty(); 
+
+                products.forEach(function (product) {
+                    var row = $('<tr>');
+                    row.append('<td>' + product.productName + '</td>');
+                    row.append('<td>' + product.totalQuantitySold + '</td>');
+                    row.append('<td>' + product.totalPrice + '</td>');
+
+                    tableBody.append(row);
+                });
+            }
+
+            $.ajax({
+                url: apiUrlTotalRevenue,
+                method: 'GET',
+                headers: {
+                    'Authorization': 'Bearer ' + token,
+                },
+                contentType: 'application/json',
+                success: function (data) {
+                
+                    createBarChart(data.monthLabels, data.monthlyRevenue);
+                },
+                error: function (error) {
+                    console.error(error);
+                }
+            });
+
+            function createBarChart(labels, data) {
+                var ctx = document.getElementById('revenueChart').getContext('2d');
+                var myChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Monthly Revenue',
+                            data: data,
+                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        plugins: {
+                            datalabels: {
+                                anchor: 'end',
+                                align: 'end',
+                                color: 'black',
+                                font: {
+                                    weight: 'bold'
+                                },
+                                formatter: function (value, context) {
+                                    return '$' + value; 
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>

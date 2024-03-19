@@ -1,0 +1,67 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <title>Trang Đăng Nhập</title>
+    
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">Đăng Nhập</div>
+                    <div class="card-body">
+                        <form id="loginForm">
+                            <div class="form-group">
+                                <label for="username">Tên người dùng</label>
+                                <input type="text" class="form-control" id="username" placeholder="Nhập tên người dùng">
+                            </div>
+                            <div class="form-group">
+                                <label for="password">Mật khẩu</label>
+                                <input type="password" class="form-control" id="password" placeholder="Nhập mật khẩu">
+                            </div>
+                            <button type="submit" class="btn btn-primary">Đăng Nhập</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+   
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"></script>
+   
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script>
+        
+        document.getElementById("loginForm").addEventListener("submit", function (e) {
+            e.preventDefault(); 
+
+            
+            var username = document.getElementById("username").value;
+            var password = document.getElementById("password").value;
+
+            axios.post("http://localhost:5191/api/Authenticate/Login", {
+                Username: username,
+                Password: password
+            })
+            .then(function (response) {
+               
+                var token = response.data.token;
+                localStorage.setItem('token', token);
+
+                
+                alert("Đăng nhập thành công!");
+                window.location.href = 'Inventory.html';
+               
+            })
+            .catch(function (error) {
+            
+                alert("Đăng nhập không thành công. Vui lòng kiểm tra tên người dùng và mật khẩu.");
+            });
+        });
+    </script>
+</body>
+</html>
